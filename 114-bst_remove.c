@@ -1,99 +1,84 @@
+/* 28. BST - Remove  */
 #include "binary_trees.h"
 
-bst_t *inorder_successor(bst_t *root);
-bst_t *bst_delete(bst_t *root, bst_t *node);
-bst_t *bst_remove_recursive(bst_t *root, bst_t *node, int value);
-bst_t *bst_remove(bst_t *root, int value);
+/* free */
+#include <stdlib.h>
+
+#include <stdio.h>
 
 /**
- * inorder_successor - Returns the minimum value of a binary search tree.
- * @root: A pointer to the root node of the BST to search.
+ * bst_find_min - find minimum value in a Binary Search Tree
  *
- * Return: The minimum value in @tree.
+ * @tree: BST root or subtree
+ * Return: node of the tree containing minimum value, or NULL if tree is NULL
  */
-bst_t *inorder_successor(bst_t *root)
+static bst_t *bst_find_min(bst_t *tree)
 {
-	while (root->left != NULL)
-		root = root->left;
-	return (root);
+	bst_t *temp = NULL;
+
+	temp = tree;
+	while (temp && temp->left)
+		temp = temp->left;
+
+	return (temp);
 }
 
-/**
- * bst_delete - Deletes a node from a binary search tree.
- * @root: A pointer to the root node of the BST.
- * @node: A pointer to the node to delete from the BST.
- *
- * Return: A pointer to the new root node after deletion.
- */
-bst_t *bst_delete(bst_t *root, bst_t *node)
-{
-	bst_t *parent = node->parent, *successor = NULL;
-
-	/* No children or right-child only */
-	if (node->left == NULL)
-	{
-		if (parent != NULL && parent->left == node)
-			parent->left = node->right;
-		else if (parent != NULL)
-			parent->right = node->right;
-		if (node->right != NULL)
-			node->right->parent = parent;
-		free(node);
-		return (parent == NULL ? node->right : root);
-	}
-
-	/* Left-child only */
-	if (node->right == NULL)
-	{
-		if (parent != NULL && parent->left == node)
-			parent->left = node->left;
-		else if (parent != NULL)
-			parent->right = node->left;
-		if (node->left != NULL)
-			node->left->parent = parent;
-		free(node);
-		return (parent == NULL ? node->left : root);
-	}
-
-	/* Two children */
-	successor = inorder_successor(node->right);
-	node->n = successor->n;
-
-	return (bst_delete(root, successor));
-}
 
 /**
- * bst_remove_recursive - Removes a node from a binary search tree recursively.
- * @root: A pointer to the root node of the BST to remove a node from.
- * @node: A pointer to the current node in the BST.
- * @value: The value to remove from the BST.
+ * bst_remove - removes a node from a Binary Search Tree
+ * notes:
+ * - when a node with two children is removed, it will always be replaced
+ * with its first in-order successor (not predecessor) (first in-order
+ * successor is the right subtree's left-most child)
+ * - this could potentially lead to an unbalanced tree, and some
+ * implementations selectively alternate between in-order successor and
+ * predecessor
  *
- * Return: A pointer to the root node after deletion.
- */
-bst_t *bst_remove_recursive(bst_t *root, bst_t *node, int value)
-{
-	if (node != NULL)
-	{
-		if (node->n == value)
-			return (bst_delete(root, node));
-		if (node->n > value)
-			return (bst_remove_recursive(root, node->left, value));
-		return (bst_remove_recursive(root, node->right, value));
-	}
-	return (NULL);
-}
-
-/**
- * bst_remove - Removes a node from a binary search tree.
- * @root: A pointer to the root node of the BST to remove a node from.
- * @value: The value to remove in the BST.
- *
- * Return: A pointer to the new root node after deletion.
- *
- * Description: If the node to be deleted has two children, it
- *              is replaced with its first in-order successor.
+ * @root: pointer to the root node of tree which will have a node removed
+ * @value: value to remove from tree
+ * Return: new root node of the tree after removing the desired value,
+ * or NULL on failure
  */
 bst_t *bst_remove(bst_t *root, int value)
 {
-	return (bst_remove_recursive(root, root, value));
+	bst_t *temp = NULL;
+
+	if (!root)
+		return (NULL);
+	if (value < root->n)
+	{ /* recurse to left subtree */
+		root->left = bst_remove(root->left, value);
+		if (root->left)
+			root->left->parent = root;
+	}
+	else if (value > root->n)
+	{ /* recurse to right subtree */
+		root->right = bst_remove(root->right, value);
+		if (root->right)
+			root->right->parent = root;
+	}
+	else
+	{ /* value match, deleting this node */
+		if (root->left == NULL)
+		{ /* right child only, or no children */
+
+			temp = root->right;
+			free(root);
+			return (temp);
+		}
+		else if (root->right == NULL)
+		{ /* left child only */
+			temp = root->left;
+			free(root);
+			return (temp);
+		}
+		/* node with two children: get the in-order successor */
+		temp = bst_find_min(root->right);
+		root->n = temp->n; /* copy the in-order successor's content */
+		/* delete the in-order successor */
+		root->right = bst_remove(root->right, temp->n);
+		if (root->right)
+			root->right->parent = root;
+	}
+	return (root);
 }
